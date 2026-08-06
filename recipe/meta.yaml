@@ -41,7 +41,8 @@ test:
   commands:
     - kilo --version
     - kilo --help
-    - kilo --version 2>&1 | grep -F "{{ version }}"
+    - kilo --version 2>&1 | grep -F "{{ version }}"  # [unix]
+    - kilo --version 2>&1 | findstr /C:"{{ version }}"  # [win]
 
 about:
   home: https://kilo.ai
