@@ -1,0 +1,61 @@
+{% set name = "kilo" %}
+{% set version = "7.4.20" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+# Prebuilt CLI binaries from upstream GitHub Releases (same assets as Homebrew / AUR).
+# win-arm64 skipped: ripgrep (runtime dep) is not on pkgs/main for that subdir yet.
+source:
+  - url: https://github.com/Kilo-Org/kilocode/releases/download/v{{ version }}/kilo-linux-x64.tar.gz  # [linux64]
+    sha256: 491361cbfd1620a346385424d7bedda1c86e51a1b1df8c4e254fbae697112896  # [linux64]
+  - url: https://github.com/Kilo-Org/kilocode/releases/download/v{{ version }}/kilo-linux-arm64.tar.gz  # [aarch64]
+    sha256: 9966bdbadf92b70133bc3396624ff8b84563e622758f7b1b1caa8f51c2f3f8ef  # [aarch64]
+  - url: https://github.com/Kilo-Org/kilocode/releases/download/v{{ version }}/kilo-darwin-x64.zip  # [osx and x86_64]
+    sha256: 521aa62ead10c9ad9323cda16f1acd9da1f126aaaa660262abe12533927ef4e3  # [osx and x86_64]
+  - url: https://github.com/Kilo-Org/kilocode/releases/download/v{{ version }}/kilo-darwin-arm64.zip  # [osx and arm64]
+    sha256: 72f79b6ac5873f43cb941037e83081d055f0caed47e4278cbf064b163db9c141  # [osx and arm64]
+  - url: https://github.com/Kilo-Org/kilocode/releases/download/v{{ version }}/kilo-windows-x64.zip  # [win64]
+    sha256: b47e9d7a99f62973fe919224d588628964d9c818ab8283e90c9441b8455739cf  # [win64]
+  # Upstream MIT license is not bundled in the platform archives.
+  - url: https://raw.githubusercontent.com/Kilo-Org/kilocode/v{{ version }}/LICENSE
+    sha256: 8a088af74e19c37e62906321b1072f593113058ed9eae507d899d41e6e5e5bb4
+
+build:
+  number: 0
+  # Prebuilt Bun-compiled binary — do not rewrite RPATHs / prefixes.
+  binary_relocation: false
+  detect_binary_files_with_prefix: false
+  skip: true  # [not (linux64 or aarch64 or (osx and (x86_64 or arm64)) or win64)]
+
+requirements:
+  build:
+    # Propagate __glibc / macOS deployment-target constraints for the prebuilt binary.
+    - {{ stdlib('c') }}
+  run:
+    # Homebrew formula + AUR kilo-bin both depend on ripgrep.
+    - ripgrep
+
+test:
+  commands:
+    - kilo --version
+    - kilo --help
+    - kilo --version 2>&1 | grep -F "{{ version }}"
+
+about:
+  home: https://kilo.ai
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Open source AI coding agent for the terminal, VS Code, and JetBrains.
+  description: |
+    Kilo is an open source coding agent that runs in the terminal (CLI), VS Code,
+    and JetBrains. This package installs the prebuilt `kilo` CLI from upstream
+    GitHub Releases.
+  doc_url: https://kilo.ai/docs
+  dev_url: https://github.com/Kilo-Org/kilocode
+
+extra:
+  recipe-maintainers:
+    - JamesRobertsonGames
