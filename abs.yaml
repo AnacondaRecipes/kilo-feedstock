@@ -1,0 +1,4 @@
+# bun is not on pkgs/main yet (AnacondaRecipes/bun-feedstock#1). Resolve it
+# from that PR's PBP graph channel; remove this file once bun is on main.
+channels:
+  - https://package-build.anaconda.com/pkg-orchestrator/v1/channels/graphs/8c286a8a-e3c6-4e1a-8571-2371f7295d47

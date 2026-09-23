@@ -1,40 +1,38 @@
-REM Install layout mirrors Homebrew: payload under Library\libexec\kilo,
-REM wrapper in Library\bin so it is on PATH for conda envs on Windows.
-
+@echo on
 setlocal EnableExtensions
 
-set "LIBEXEC=%PREFIX%\Library\libexec\kilo"
-set "BINDIR=%PREFIX%\Library\bin"
+REM Keep bun's install cache and the models.dev cache inside the work dir.
+set "BUN_INSTALL_CACHE_DIR=%SRC_DIR%\.bun-cache"
+set "USERPROFILE=%SRC_DIR%\.home"
+if not exist "%USERPROFILE%" mkdir "%USERPROFILE%"
 
+REM JS dependencies, exactly as pinned (with integrity hashes) by bun.lock.
+bun install --frozen-lockfile
+if errorlevel 1 exit 1
+
+REM Release build for the native target only (--single), compiled with conda's
+REM bun; see build.sh for the flags.
+set "KILO_VERSION=%PKG_VERSION%"
+set "KILO_CHANNEL=latest"
+set "KILO_RELEASE=1"
+set "KILO_SKIP_RELEASE_UPLOAD=1"
+pushd packages\opencode
+bun run script/build.ts --single --skip-install
+if errorlevel 1 exit 1
+popd
+
+set "OUT=packages\opencode\dist\@kilocode\cli-windows-x64\bin"
+set "LIBEXEC=%LIBRARY_PREFIX%\libexec\kilo"
 if not exist "%LIBEXEC%" mkdir "%LIBEXEC%"
-if not exist "%BINDIR%" mkdir "%BINDIR%"
+if not exist "%LIBRARY_BIN%" mkdir "%LIBRARY_BIN%"
 
-copy /Y kilo.exe "%LIBEXEC%\kilo.exe"
-if errorlevel 1 exit /b 1
-copy /Y kilo-sandbox-mutation-worker.js "%LIBEXEC%\kilo-sandbox-mutation-worker.js"
-if errorlevel 1 exit /b 1
+xcopy /E /I /Q /Y "%OUT%" "%LIBEXEC%"
+if errorlevel 1 exit 1
+del /Q "%LIBEXEC%\*.map" 2>nul
 
-xcopy /E /I /Y tree-sitter "%LIBEXEC%\tree-sitter\"
-if errorlevel 1 exit /b 1
-
-if exist console (
-  xcopy /E /I /Y console "%LIBEXEC%\console\"
-  if errorlevel 1 exit /b 1
-)
-
-if exist kilo-sandbox-network-relay.js (
-  copy /Y kilo-sandbox-network-relay.js "%LIBEXEC%\kilo-sandbox-network-relay.js"
-  if errorlevel 1 exit /b 1
-)
-
-REM Wrapper bat sets asset env vars then execs the real binary.
+REM Wrapper on PATH; kilo.exe finds its assets next to its own executable.
 (
   echo @echo off
-  echo set "KILO_ROOT=%%~dp0.."
-  echo if not defined KILO_TREE_SITTER_WASM_DIR set "KILO_TREE_SITTER_WASM_DIR=%%KILO_ROOT%%\libexec\kilo\tree-sitter"
-  echo if not defined KILO_CONSOLE_ASSET_DIR if exist "%%KILO_ROOT%%\libexec\kilo\console\" set "KILO_CONSOLE_ASSET_DIR=%%KILO_ROOT%%\libexec\kilo\console"
-  echo "%%KILO_ROOT%%\libexec\kilo\kilo.exe" %%*
-) > "%BINDIR%\kilo.bat"
-if errorlevel 1 exit /b 1
-
-endlocal
+  echo "%%~dp0..\libexec\kilo\kilo.exe" %%*
+) > "%LIBRARY_BIN%\kilo.bat"
+if errorlevel 1 exit 1

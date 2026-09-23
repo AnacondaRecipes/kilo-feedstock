@@ -9,5 +9,5 @@ Feedstock license: [BSD-3-Clause](https://github.com/AnacondaRecipes/kilocode-fe
 
 Summary: Open source AI coding agent for the terminal, VS Code, and JetBrains.
 
-This feedstock packages the prebuilt `kilo` CLI from
-[Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) GitHub Releases.
+This feedstock builds the `kilo` CLI from source
+([Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)) with bun.

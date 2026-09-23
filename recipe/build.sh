@@ -1,44 +1,50 @@
 #!/bin/bash
 set -euxo pipefail
 
-# Install layout mirrors Homebrew Formula/kilo.rb:
-#   libexec holds the binary + assets; bin/kilo is an env wrapper.
+# Keep bun's install cache and the models.dev cache inside the work dir.
+export BUN_INSTALL_CACHE_DIR="${SRC_DIR}/.bun-cache"
+export HOME="${SRC_DIR}/.home"
+mkdir -p "${HOME}"
 
+# JS dependencies, exactly as pinned (with integrity hashes) by bun.lock.
+bun install --frozen-lockfile
+
+# Release build for the native target only (--single), compiled with conda's
+# bun. --skip-install: the extra `bun install --os=* --cpu=*` steps only fetch
+# other platforms' native packages for cross-compiling.
+export KILO_VERSION="${PKG_VERSION}"
+export KILO_CHANNEL=latest
+export KILO_RELEASE=1
+export KILO_SKIP_RELEASE_UPLOAD=1
+export KILO_SKIP_PATCHELF=1
+# Use conda's bubblewrap (run dependency) instead of building the bundled one,
+# which needs Zig.
+export KILO_SKIP_BUNDLED_BWRAP=1
+(cd packages/opencode && bun run script/build.ts --single --skip-install)
+
+case "${target_platform}" in
+  linux-64) dist=linux-x64 ;;
+  linux-aarch64) dist=linux-arm64 ;;
+  osx-arm64) dist=darwin-arm64 ;;
+  *) echo "unsupported target_platform ${target_platform}" >&2; exit 1 ;;
+esac
+out="packages/opencode/dist/@kilocode/cli-${dist}/bin"
+
+# Install layout mirrors Homebrew: the binary and the assets it finds next to
+# its own executable live in libexec; bin/kilo is a thin wrapper.
 LIBEXEC="${PREFIX}/libexec/kilo"
 mkdir -p "${LIBEXEC}" "${PREFIX}/bin"
+cp -a "${out}/." "${LIBEXEC}/"
+rm -f "${LIBEXEC}"/*.map
 
-install -m 755 kilo "${LIBEXEC}/kilo"
-install -m 644 kilo-sandbox-mutation-worker.js "${LIBEXEC}/kilo-sandbox-mutation-worker.js"
-cp -a tree-sitter "${LIBEXEC}/tree-sitter"
-
-# Optional pieces shipped in some platform archives.
-if [[ -d console ]]; then
-  cp -a console "${LIBEXEC}/console"
-fi
-if [[ -f kilo-sandbox-network-relay.js ]]; then
-  install -m 644 kilo-sandbox-network-relay.js "${LIBEXEC}/kilo-sandbox-network-relay.js"
-fi
-# Linux-only sandbox helpers + third-party license texts.
-if [[ -f bwrap ]]; then
-  install -m 755 bwrap "${LIBEXEC}/bwrap"
-fi
-if [[ -f kilo-sandbox-seccomp ]]; then
-  install -m 755 kilo-sandbox-seccomp "${LIBEXEC}/kilo-sandbox-seccomp"
-fi
-if [[ -d licenses ]]; then
-  mkdir -p "${PREFIX}/share/licenses/kilo"
-  cp -a licenses/. "${PREFIX}/share/licenses/kilo/"
+if [[ "${target_platform}" == linux-* ]]; then
+  ln -s ../../bin/bwrap "${LIBEXEC}/bwrap"
+  cp "${LIBEXEC}/licenses/sandbox-runtime/LICENSE" "${SRC_DIR}/sandbox-runtime-LICENSE"
 fi
 
-# Wrapper sets asset paths the way Homebrew's write_env_script does.
 cat > "${PREFIX}/bin/kilo" <<'EOF'
 #!/usr/bin/env bash
-set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export KILO_TREE_SITTER_WASM_DIR="${KILO_TREE_SITTER_WASM_DIR:-${ROOT}/libexec/kilo/tree-sitter}"
-if [[ -d "${ROOT}/libexec/kilo/console" ]]; then
-  export KILO_CONSOLE_ASSET_DIR="${KILO_CONSOLE_ASSET_DIR:-${ROOT}/libexec/kilo/console}"
-fi
 exec "${ROOT}/libexec/kilo/kilo" "$@"
 EOF
 chmod 755 "${PREFIX}/bin/kilo"

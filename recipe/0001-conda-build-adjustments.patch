@@ -1,0 +1,25 @@
+--- a/packages/opencode/script/build.ts
++++ b/packages/opencode/script/build.ts
+@@ -368,7 +368,10 @@
+     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
+   }
+ 
+-  if (item.os === "linux") {
++  // conda: the compiled binary inherits conda bun's interpreter, which is
++  // already the standard one; rewriting it with patchelf risks the ELF layout
++  // of the embedded bundle (see bun-feedstock's binary_relocation note).
++  if (item.os === "linux" && !process.env.KILO_SKIP_PATCHELF) {
+     const interpreters: Record<string, string> = {
+       x64: "/lib64/ld-linux-x86-64.so.2",
+       arm64: "/lib/ld-linux-aarch64.so.1",
+@@ -451,7 +454,9 @@
+   binaries[name] = Script.version
+ }
+ 
+-if (Script.release) {
++// conda: KILO_RELEASE is set for a release build (no sourcemaps, release build
++// kind), but the archives are not packed or uploaded to GitHub.
++if (Script.release && !process.env.KILO_SKIP_RELEASE_UPLOAD) {
+   const archives: string[] = [] // kilocode_change
+   for (const key of Object.keys(binaries)) {
+     const archive = key.replace(pkg.name, "kilo") // kilocode_change
