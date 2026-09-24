@@ -1,0 +1,77 @@
+{% set name = "kilo" %}
+{% set version = "7.7.9" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: 60afdbd7e7516c225371a5474fd94f9394682326b4d2441f75766f018e415e7d
+  patches:
+    # Build as a release (no sourcemaps, release build kind) without the
+    # GitHub archive upload, and skip the patchelf interpreter rewrite of the
+    # compiled binary (it already has the standard interpreter from conda bun).
+    - 0001-conda-build-adjustments.patch
+
+build:
+  number: 0
+  # bun (the compiler and runtime kilo is built into) is not built for osx-64.
+  skip: true  # [osx and x86_64]
+  # The kilo executable is conda's bun with the JS bundle embedded in it;
+  # rpath rewriting or prefix replacement would corrupt the embedded bundle.
+  binary_relocation: false
+  detect_binary_files_with_prefix: false
+
+requirements:
+  build:
+    # `bun build --compile` copies the running bun into the kilo executable, so
+    # this is also kilo's JS runtime. Upstream requires bun ^1.3.14
+    # (package.json packageManager).
+    - bun >=1.3.14,<2
+    - git
+    # The executable is bun's, so it links libc like bun does: resolves those
+    # DSOs for the overlinking check and adds the matching __glibc constraint.
+    - {{ stdlib('c') }}
+  run:
+    # Inherited from conda's bun: built for a 13.0 deployment target.
+    - __osx >=13.0  # [osx]
+    # kilo uses `rg` from PATH on unix; on Windows it ignores PATH (MSYS rg.exe
+    # can be incompatible) and manages its own copy.
+    - ripgrep  # [unix]
+    # Linux sandbox: kilo looks for bwrap next to its executable (build.sh
+    # links conda's bubblewrap there) instead of the bundled musl build, which
+    # needs Zig.
+    - bubblewrap  # [linux]
+
+test:
+  commands:
+    - kilo --version
+    - kilo --help
+    - kilo --version 2>&1 | grep -Fx "{{ version }}"  # [unix]
+    - kilo --version 2>&1 | findstr /L /C:"{{ version }}"  # [win]
+    # build.sh runs upstream's build-time smoke tests (embedded models snapshot,
+    # sandbox mutation worker) against the native binary.
+    - test -L "${PREFIX}/libexec/kilo/bwrap"  # [linux]
+    - test -f "${PREFIX}/libexec/kilo/tree-sitter/tree-sitter.wasm"  # [unix]
+    - if not exist "%LIBRARY_PREFIX%\libexec\kilo\tree-sitter\tree-sitter.wasm" exit 1  # [win]
+
+about:
+  home: https://kilo.ai
+  license: MIT
+  license_family: MIT
+  license_file:
+    - LICENSE
+    # Kilo ships Anthropic's sandbox-runtime seccomp helper on linux.
+    - sandbox-runtime-LICENSE  # [linux]
+  summary: Open source AI coding agent for the terminal, VS Code, and JetBrains.
+  description: |
+    Kilo is an open source coding agent that runs in the terminal (CLI), VS Code,
+    and JetBrains. This package provides the `kilo` CLI, built from source with
+    bun.
+  doc_url: https://kilo.ai/docs
+  dev_url: https://github.com/Kilo-Org/kilocode
+
+extra:
+  recipe-maintainers:
+    - JamesRobertsonGames

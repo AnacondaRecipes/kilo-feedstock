@@ -1,0 +1,5 @@
+# bun is not on pkgs/main yet (AnacondaRecipes/bun-feedstock#1). Resolve it
+# from that PR's staging channel (commit de42b80: built with rust-nightly
+# 1.99.0_2026_07_20 + rust-src-nightly); remove this file once bun is on main.
+channels:
+  - https://staging.continuum.io/pbp/fs/bun-feedstock/pr1/de42b80
