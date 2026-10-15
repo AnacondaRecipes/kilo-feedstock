@@ -9,10 +9,11 @@ source:
   url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
   sha256: 96050bedea55c3be9d976546fc225254cf8c50c5393087ad044d1b39e087f4d7
   patches:
-    # Build as a release (no sourcemaps, release build kind) without the
-    # GitHub archive upload, and skip the patchelf interpreter rewrite of the
-    # compiled binary (it already has the standard interpreter from conda bun).
-    - 0001-conda-build-adjustments.patch
+    # Backport of Kilo-Org/kilocode#15105 (KILO_SKIP_PATCHELF and
+    # KILO_SKIP_RELEASE_UPLOAD, set by build.sh / bld.bat): release build
+    # without the GitHub upload or the patchelf interpreter rewrite.
+    # Remove once #15105 is merged and released.
+    - 0001-backport-kilocode-15105-distro-opt-outs.patch
 
 build:
   number: 0
