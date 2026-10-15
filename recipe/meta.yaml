@@ -31,11 +31,10 @@ requirements:
     - bun >=1.4.2,<2
     - git
     # The executable is bun's, so it links libc like bun does: resolves those
-    # DSOs for the overlinking check and adds the matching __glibc constraint.
+    # DSOs for the overlinking check. bun's run_exports add its OS floor
+    # (__glibc / __osx >=13.0) to run.
     - {{ stdlib('c') }}
   run:
-    # Inherited from conda's bun: built for a 13.0 deployment target.
-    - __osx >=13.0  # [osx]
     # kilo uses `rg` from PATH on unix; on Windows it ignores PATH (MSYS rg.exe
     # can be incompatible) and manages its own copy.
     - ripgrep  # [unix]
