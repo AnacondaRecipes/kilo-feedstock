@@ -1,5 +1,5 @@
 {% set name = "kilo" %}
-{% set version = "7.8.8" %}
+{% set version = "7.8.12" %}
 
 package:
   name: {{ name }}
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: ade22a13f1b34e6e8b72c54ce4dc9a19e7f5b78e7ebf544aa0abe8e8a1f396fe
+  sha256: 96050bedea55c3be9d976546fc225254cf8c50c5393087ad044d1b39e087f4d7
   patches:
     # Build as a release (no sourcemaps, release build kind) without the
     # GitHub archive upload, and skip the patchelf interpreter rewrite of the
