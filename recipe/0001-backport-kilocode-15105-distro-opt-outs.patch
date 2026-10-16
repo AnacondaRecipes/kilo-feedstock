@@ -1,0 +1,54 @@
+From 4aebd8308432675518051216d39f4ae477f5c8c2 Mon Sep 17 00:00:00 2001
+From: Jamie Robertson <jamierobertsongames@gmail.com>
+Date: Thu, 15 Oct 2026 09:56:47 +0100
+Subject: [PATCH] fix(cli): let distro builds skip patchelf and the release
+ upload
+
+Backport of https://github.com/Kilo-Org/kilocode/pull/15105 for the conda
+build. Remove this patch once that PR is merged and released.
+
+Adds two opt-outs to script/build.ts, in the style of
+KILO_SKIP_BUNDLED_BWRAP (build.sh / bld.bat set them):
+
+- KILO_SKIP_PATCHELF=1 skips the linux interpreter rewrite. The compiled
+  binary inherits conda bun's interpreter, which is already the standard
+  one, and patchelf can disturb the ELF layout of the embedded bundle.
+- KILO_SKIP_RELEASE_UPLOAD=1 keeps the release build settings (no
+  sourcemaps, release build kind) but skips packing, SBOM evidence and
+  the GitHub upload.
+---
+ packages/opencode/script/build.ts | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/packages/opencode/script/build.ts b/packages/opencode/script/build.ts
+index 73592c916..a286b9172 100755
+--- a/packages/opencode/script/build.ts
++++ b/packages/opencode/script/build.ts
+@@ -370,7 +370,9 @@ for (const item of targets) {
+     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
+   }
+ 
+-  if (item.os === "linux") {
++  // KILO_SKIP_PATCHELF=1: for builds whose bun already has the standard
++  // interpreter (e.g. distro packages), where rewriting the ELF is unneeded.
++  if (item.os === "linux" && process.env.KILO_SKIP_PATCHELF !== "1") {
+     const interpreters: Record<string, string> = {
+       x64: "/lib64/ld-linux-x86-64.so.2",
+       arm64: "/lib/ld-linux-aarch64.so.1",
+@@ -453,7 +455,10 @@ for (const item of targets) {
+   binaries[name] = Script.version
+ }
+ 
+-if (Script.release) {
++// kilocode_change start - KILO_SKIP_RELEASE_UPLOAD=1 keeps the release build
++// settings but skips packing, SBOM evidence and the GitHub upload (distro builds)
++if (Script.release && process.env.KILO_SKIP_RELEASE_UPLOAD !== "1") {
++  // kilocode_change end
+   const archives: string[] = [] // kilocode_change
+   for (const key of Object.keys(binaries)) {
+     const archive = key.replace(pkg.name, "kilo") // kilocode_change
+
+base-commit: 8001cdc387522ff36fc0b775e3bd11e098f5b03f
+-- 
+2.50.1 (Apple Git-155)
+
