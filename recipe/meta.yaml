@@ -6,14 +6,25 @@ package:
   version: {{ version }}
 
 source:
-  url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: 96050bedea55c3be9d976546fc225254cf8c50c5393087ad044d1b39e087f4d7
-  patches:
-    # Backport of Kilo-Org/kilocode#15105 (KILO_SKIP_PATCHELF and
-    # KILO_SKIP_RELEASE_UPLOAD, set by build.sh / bld.bat): release build
-    # without the GitHub upload or the patchelf interpreter rewrite.
-    # Remove once #15105 is merged and released.
-    - 0001-backport-kilocode-15105-distro-opt-outs.patch
+  - url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
+    sha256: 96050bedea55c3be9d976546fc225254cf8c50c5393087ad044d1b39e087f4d7
+    patches:
+      # Backport of Kilo-Org/kilocode#15105 (KILO_SKIP_PATCHELF and
+      # KILO_SKIP_RELEASE_UPLOAD, set by build.sh / bld.bat): release build
+      # without the GitHub upload or the patchelf interpreter rewrite.
+      # Remove once #15105 is merged and released.
+      - 0001-backport-kilocode-15105-distro-opt-outs.patch
+  # The kilo executable is conda's bun with the bundle appended, so it ships
+  # bun's runtime: its notices (JSC/WebKit LGPL and the statically linked
+  # libraries), pinned to the bun release kilo is built with.
+  - url: https://raw.githubusercontent.com/oven-sh/bun/bun-v1.4.2/LICENSE.md
+    sha256: b9caf52728691b4057e371232c221a132883198be2f3d2ddf92c90404c984b1a
+    fn: bun-LICENSE.md
+  # @ff-labs/fff (embedded native search library) ships no licence file in its
+  # npm packages; MIT, from the repo at the 0.9.4 publish commit.
+  - url: https://raw.githubusercontent.com/dmtrKovalenko/fff/7d7910b6ba78ea8406671eaac8cdb5eb9850d9d1/LICENSE
+    sha256: f8264de82db188834a5711d7e348dc08c33db14f79bb587ccb42616fd694ee81
+    fn: fff-LICENSE
 
 build:
   number: 0
@@ -46,22 +57,35 @@ requirements:
 
 test:
   commands:
-    - kilo --version
-    - kilo --help
+    - kilo --version  # [unix]
+    - kilo --help  # [unix]
     - kilo --version 2>&1 | grep -Fx "{{ version }}"  # [unix]
-    - kilo --version 2>&1 | findstr /L /C:"{{ version }}"  # [win]
+    # kilo is a .bat wrapper on Windows: without `call` the test script ends
+    # after the first command.
+    - call kilo --version  # [win]
+    - call kilo --help  # [win]
+    - call kilo --version 2>&1 | findstr /L /C:"{{ version }}"  # [win]
     # build.sh runs upstream's build-time smoke tests (embedded models snapshot,
     # sandbox mutation worker) against the native binary.
-    - test -L "${PREFIX}/libexec/kilo/bwrap"  # [linux]
+    # -x follows the link, so it fails if conda's bwrap does not resolve.
+    - test -x "${PREFIX}/libexec/kilo/bwrap"  # [linux]
     - test -f "${PREFIX}/libexec/kilo/tree-sitter/tree-sitter.wasm"  # [unix]
     - if not exist "%LIBRARY_PREFIX%\libexec\kilo\tree-sitter\tree-sitter.wasm" exit 1  # [win]
 
 about:
   home: https://kilo.ai
-  license: MIT
-  license_family: MIT
+  # kilo (MIT) + the embedded bun runtime (same expression as bun-feedstock,
+  # which also covers sandbox-runtime's Apache-2.0 and the MIT npm modules).
+  license: MIT AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND ISC AND Zlib AND IJG AND Unicode-3.0 AND (BSD-3-Clause OR GPL-2.0-only)
+  license_family: OTHER
   license_file:
     - LICENSE
+    - bun-LICENSE.md
+    - fff-LICENSE
+    # Native npm modules embedded in the executable, collected by build.sh /
+    # bld.bat: opentui (and the ghostty/lcms2/libwebp/stb/wuffs notices of
+    # its native library), bun-pty, @parcel/watcher, web-tree-sitter.
+    - third-party-licenses/
     # Kilo ships Anthropic's sandbox-runtime seccomp helper on linux.
     - sandbox-runtime-LICENSE  # [linux]
   summary: Open source AI coding agent for the terminal, VS Code, and JetBrains.
