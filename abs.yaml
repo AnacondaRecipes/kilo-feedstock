@@ -1,0 +1,5 @@
+# bun build 1 (run_exports for `bun build --compile` output) is not on
+# pkgs/main yet (AnacondaRecipes/bun-feedstock#2). Resolve it from that PR's
+# staging channel; remove this file once it is on main.
+channels:
+  - https://staging.continuum.io/pbp/fs/bun-feedstock/pr2/e4dbe31
