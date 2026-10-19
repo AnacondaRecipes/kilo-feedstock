@@ -42,20 +42,9 @@ if [[ "${target_platform}" == linux-* ]]; then
   cp "${LIBEXEC}/licenses/sandbox-runtime/LICENSE" "${SRC_DIR}/sandbox-runtime-LICENSE"
 fi
 
-# Licences of the native npm modules embedded in the executable (meta.yaml
-# license_file: third-party-licenses/). Fails if one is missing.
-lic="${SRC_DIR}/third-party-licenses"
-mkdir -p "${lic}"
-nm=packages/opencode/node_modules
-for p in @opentui/core bun-pty @parcel/watcher web-tree-sitter; do
-  cp "${nm}/${p}/LICENSE" "${lic}/$(echo "${p#@}" | tr / -)-LICENSE"
-done
-# opentui's native library bundles ghostty, lcms2, libwebp, stb and wuffs.
-ot=(node_modules/.bun/@opentui+core-*/node_modules/@opentui/core-*)
-test -d "${ot[0]}"
-for f in "${ot[0]}"/LICENSE* "${ot[0]}"/AUTHORS* "${ot[0]}"/PATENTS*; do
-  cp "${f}" "${lic}/opentui-native-$(basename "${f}")"
-done
+# Notices for everything the executable embeds (bun's + the npm closure from
+# upstream's SBOM graph) into third-party-licenses/ (meta.yaml license_file).
+bun "${RECIPE_DIR}/collect-licenses.ts" "${dist}"
 
 cat > "${PREFIX}/bin/kilo" <<'EOF'
 #!/usr/bin/env bash

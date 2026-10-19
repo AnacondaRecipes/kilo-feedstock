@@ -14,17 +14,26 @@ source:
       # without the GitHub upload or the patchelf interpreter rewrite.
       # Remove once #15105 is merged and released.
       - 0001-backport-kilocode-15105-distro-opt-outs.patch
-  # The kilo executable is conda's bun with the bundle appended, so it ships
-  # bun's runtime: its notices (JSC/WebKit LGPL and the statically linked
-  # libraries), pinned to the bun release kilo is built with.
-  - url: https://raw.githubusercontent.com/oven-sh/bun/bun-v1.4.2/LICENSE.md
-    sha256: b9caf52728691b4057e371232c221a132883198be2f3d2ddf92c90404c984b1a
-    fn: bun-LICENSE.md
-  # @ff-labs/fff (embedded native search library) ships no licence file in its
-  # npm packages; MIT, from the repo at the 0.9.4 publish commit.
+  # Notices for embedded components that ship none themselves (everything else
+  # is collected by collect-licenses.ts):
+  # - @ff-labs/fff (native search library): MIT, repo at its 0.9.4 publish commit.
   - url: https://raw.githubusercontent.com/dmtrKovalenko/fff/7d7910b6ba78ea8406671eaac8cdb5eb9850d9d1/LICENSE
     sha256: f8264de82db188834a5711d7e348dc08c33db14f79bb587ccb42616fd694ee81
     fn: fff-LICENSE
+  # - @openauthjs/openauth (snapshot release, no licence in the package): MIT.
+  - url: https://raw.githubusercontent.com/anomalyco/openauth/b76be0a86d1e244b064f5320511e6a020f35a78a/LICENSE
+    sha256: 3f12d40000ff2f6b9220cbdb7e5a6e24d48c4c0342097497793d38518f31264b
+    fn: openauth-LICENSE
+  # - Fonts in the console assets (Inter, JetBrains Mono, Roboto Mono): OFL-1.1.
+  - url: https://raw.githubusercontent.com/rsms/inter/v4.1/LICENSE.txt
+    sha256: 262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a
+    fn: font-Inter-OFL.txt
+  - url: https://raw.githubusercontent.com/JetBrains/JetBrainsMono/v2.304/OFL.txt
+    sha256: 30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad
+    fn: font-JetBrainsMono-OFL.txt
+  - url: https://raw.githubusercontent.com/googlefonts/RobotoMono/895ec691990d041dd727c7b5afa3ce56525d98e6/OFL.txt
+    sha256: 50ab8dd54680d3473f649c9db86fece88434d097c7834475c1c72d2f8c429215
+    fn: font-RobotoMono-OFL.txt
 
 build:
   number: 0
@@ -74,17 +83,27 @@ test:
 
 about:
   home: https://kilo.ai
-  # kilo (MIT) + the embedded bun runtime (same expression as bun-feedstock,
-  # which also covers sandbox-runtime's Apache-2.0 and the MIT npm modules).
-  license: MIT AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND ISC AND Zlib AND IJG AND Unicode-3.0 AND (BSD-3-Clause OR GPL-2.0-only)
+  # The shipped closure: kilo (MIT) + the embedded bun runtime (bun-feedstock's
+  # expression) + the compiled-in npm closure from upstream's SBOM graph
+  # (collect-licenses.ts fails on a licence not listed here) + OFL-1.1 fonts.
+  license: >-
+    MIT AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND Apache-2.0 AND
+    Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND ISC AND
+    Zlib AND IJG AND Unicode-3.0 AND BlueOak-1.0.0 AND Unlicense AND 0BSD AND
+    CC0-1.0 AND CC-BY-3.0 AND CC-BY-4.0 AND OFL-1.1 AND
+    (BSD-3-Clause OR GPL-2.0-only) AND (AFL-2.1 OR BSD-3-Clause) AND
+    (MPL-2.0 OR Apache-2.0) AND (MIT OR GPL-3.0-or-later) AND (MIT OR CC0-1.0)
   license_family: OTHER
   license_file:
     - LICENSE
-    - bun-LICENSE.md
     - fff-LICENSE
-    # Native npm modules embedded in the executable, collected by build.sh /
-    # bld.bat: opentui (and the ghostty/lcms2/libwebp/stb/wuffs notices of
-    # its native library), bun-pty, @parcel/watcher, web-tree-sitter.
+    - openauth-LICENSE
+    - font-Inter-OFL.txt
+    - font-JetBrainsMono-OFL.txt
+    - font-RobotoMono-OFL.txt
+    # Collected by collect-licenses.ts (run from build.sh / bld.bat): bun/ (the
+    # conda bun build's own notices: WebKit/JSC LGPL, ICU, BoringSSL, tinycc,
+    # ...) and npm/ (every compiled-in npm package's notices + MANIFEST.tsv).
     - third-party-licenses/
     # Kilo ships Anthropic's sandbox-runtime seccomp helper on linux.
     - sandbox-runtime-LICENSE  # [linux]
