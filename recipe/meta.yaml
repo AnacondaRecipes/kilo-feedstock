@@ -36,7 +36,7 @@ source:
     fn: font-RobotoMono-OFL.txt
 
 build:
-  number: 0
+  number: 1
   # bun (the compiler and runtime kilo is built into) is not built for osx-64.
   skip: true  # [osx and x86_64]
   # The kilo executable is conda's bun with the JS bundle embedded in it;
