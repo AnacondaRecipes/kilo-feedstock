@@ -22,7 +22,15 @@ bun run script/build.ts --single --skip-install
 if errorlevel 1 exit 1
 popd
 
-set "OUT=packages\opencode\dist\@kilocode\cli-windows-x64\bin"
+if /i "%target_platform%"=="win-64" (
+  set "DIST=windows-x64"
+) else if /i "%target_platform%"=="win-arm64" (
+  set "DIST=windows-arm64"
+) else (
+  echo unsupported target_platform %target_platform% 1>&2
+  exit 1
+)
+set "OUT=packages\opencode\dist\@kilocode\cli-%DIST%\bin"
 set "LIBEXEC=%LIBRARY_PREFIX%\libexec\kilo"
 if not exist "%LIBEXEC%" mkdir "%LIBEXEC%"
 if not exist "%LIBRARY_BIN%" mkdir "%LIBRARY_BIN%"
@@ -33,7 +41,7 @@ del /Q "%LIBEXEC%\*.map" 2>nul
 
 REM Notices for everything the executable embeds (bun's + the npm closure from
 REM upstream's SBOM graph) into third-party-licenses\ (meta.yaml license_file).
-bun "%RECIPE_DIR%\collect-licenses.ts" windows-x64
+bun "%RECIPE_DIR%\collect-licenses.ts" %DIST%
 if errorlevel 1 exit 1
 
 REM Wrapper on PATH; kilo.exe finds its assets next to its own executable.
