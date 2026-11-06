@@ -48,7 +48,7 @@ requirements:
   build:
     # `bun build --compile` copies the running bun into the kilo executable, so
     # this is also kilo's JS runtime. build.ts fails unless bun's revision is
-    # upstream's pin (script/kilocode/bun.json: 1.4.4, 38afee6c).
+    # upstream's pin (script/kilocode/bun.json: 1.4.4).
     - bun 1.4.4
     - git
     # The executable is bun's, so it links libc like bun does: resolves those
