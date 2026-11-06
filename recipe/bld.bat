@@ -16,6 +16,7 @@ set "KILO_VERSION=%PKG_VERSION%"
 set "KILO_CHANNEL=latest"
 set "KILO_RELEASE=1"
 set "KILO_SKIP_RELEASE_UPLOAD=1"
+set "KILO_USE_HOST_BUN=1"
 pushd packages\opencode
 bun run script/build.ts --single --skip-install
 if errorlevel 1 exit 1
