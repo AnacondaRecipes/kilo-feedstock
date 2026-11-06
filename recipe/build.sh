@@ -16,7 +16,8 @@ export KILO_VERSION="${PKG_VERSION}"
 export KILO_CHANNEL=latest
 export KILO_RELEASE=1
 export KILO_SKIP_RELEASE_UPLOAD=1
-export KILO_SKIP_PATCHELF=1
+# Embed conda bun (this one) as the runtime; also skips the patchelf rewrite.
+export KILO_USE_HOST_BUN=1
 # Use conda's bubblewrap (run dependency) instead of building the bundled one,
 # which needs Zig.
 export KILO_SKIP_BUNDLED_BWRAP=1
