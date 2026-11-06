@@ -1,4 +1,0 @@
-# bun 1.4.4 (AnacondaRecipes/bun-feedstock#3) is not on pkgs/main yet. Resolve
-# it from that PR's graph channel; remove this file once it is on main.
-channels:
-  - https://package-build.internal.anaconda.com/pkg-orchestrator/v1/channels/graphs/d7b2d300-0252-41f0-a698-a4df0445ae5b
