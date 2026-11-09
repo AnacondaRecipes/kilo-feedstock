@@ -1,41 +1,53 @@
-From 4aebd8308432675518051216d39f4ae477f5c8c2 Mon Sep 17 00:00:00 2001
+From 7195329aa542f5c54e55044e67937850e1207de9 Mon Sep 17 00:00:00 2001
 From: Jamie Robertson <jamierobertsongames@gmail.com>
 Date: Thu, 15 Oct 2026 09:56:47 +0100
-Subject: [PATCH] fix(cli): let distro builds skip patchelf and the release
- upload
+Subject: [PATCH] fix(cli): let distro builds use the host bun and skip the
+ release upload
 
-Backport of https://github.com/Kilo-Org/kilocode/pull/15105 for the conda
-build. Remove this patch once that PR is merged and released.
+Builds on https://github.com/Kilo-Org/kilocode/pull/15105 for the conda
+build; remove this patch once an equivalent change is released upstream.
 
 Adds two opt-outs to script/build.ts, in the style of
 KILO_SKIP_BUNDLED_BWRAP (build.sh / bld.bat set them):
 
-- KILO_SKIP_PATCHELF=1 skips the linux interpreter rewrite. The compiled
-  binary inherits conda bun's interpreter, which is already the standard
-  one, and patchelf can disturb the ELF layout of the embedded bundle.
+- KILO_USE_HOST_BUN=1 embeds the bun running the build (conda's bun,
+  built from source at the pinned revision that build.ts already checks)
+  as the native target's runtime, like the Nix path, instead of
+  downloading the prebuilt npm runtime. The existing
+  `runtime !== process.execPath` check then also skips the patchelf
+  interpreter rewrite. Non-native targets fail instead of downloading.
 - KILO_SKIP_RELEASE_UPLOAD=1 keeps the release build settings (no
   sourcemaps, release build kind) but skips packing, SBOM evidence and
   the GitHub upload.
 ---
- packages/opencode/script/build.ts | 9 +++++++--
- 1 file changed, 7 insertions(+), 2 deletions(-)
+ packages/opencode/script/build.ts | 17 +++++++++++------
+ 1 file changed, 11 insertions(+), 6 deletions(-)
 
 diff --git a/packages/opencode/script/build.ts b/packages/opencode/script/build.ts
-index 73592c916..a286b9172 100755
+index 908677db5e..acdbe7ecae 100755
 --- a/packages/opencode/script/build.ts
 +++ b/packages/opencode/script/build.ts
-@@ -370,7 +370,9 @@ for (const item of targets) {
-     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
-   }
- 
--  if (item.os === "linux") {
-+  // KILO_SKIP_PATCHELF=1: for builds whose bun already has the standard
-+  // interpreter (e.g. distro packages), where rewriting the ELF is unneeded.
-+  if (item.os === "linux" && process.env.KILO_SKIP_PATCHELF !== "1") {
-     const interpreters: Record<string, string> = {
-       x64: "/lib64/ld-linux-x86-64.so.2",
-       arm64: "/lib/ld-linux-aarch64.so.1",
-@@ -453,7 +455,10 @@ for (const item of targets) {
+@@ -294,12 +294,14 @@ for (const item of targets) {
+   await $`mkdir -p dist/${name}/bin`
+   // kilocode_change start
+   // Nix already verifies its runtime with fetchurl and builds without network access.
++  // KILO_USE_HOST_BUN=1: distro builds embed the bun running this script (built
++  // from source at the revision checked above) instead of downloading one.
++  const native = item.os === process.platform && item.arch === process.arch && !item.abi && item.avx2 !== false
++  if (process.env.KILO_USE_HOST_BUN === "1" && !native) {
++    throw new Error(`KILO_USE_HOST_BUN=1 only builds the native target, not ${name}`)
++  }
+   const runtime =
+-    process.env.NIX_BUILD_TOP &&
+-    item.os === process.platform &&
+-    item.arch === process.arch &&
+-    !item.abi &&
+-    item.avx2 !== false
++    (process.env.NIX_BUILD_TOP || process.env.KILO_USE_HOST_BUN === "1") && native
+       ? process.execPath
+       : await KiloBun.stage(item)
+   const bwrap =
+@@ -468,7 +470,10 @@ for (const item of targets) {
    binaries[name] = Script.version
  }
  
@@ -47,8 +59,3 @@ index 73592c916..a286b9172 100755
    const archives: string[] = [] // kilocode_change
    for (const key of Object.keys(binaries)) {
      const archive = key.replace(pkg.name, "kilo") // kilocode_change
-
-base-commit: 8001cdc387522ff36fc0b775e3bd11e098f5b03f
--- 
-2.50.1 (Apple Git-155)
-

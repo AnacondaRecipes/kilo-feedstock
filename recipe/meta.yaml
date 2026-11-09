@@ -1,5 +1,5 @@
 {% set name = "kilo" %}
-{% set version = "7.8.12" %}
+{% set version = "7.8.27" %}
 
 package:
   name: {{ name }}
@@ -7,12 +7,12 @@ package:
 
 source:
   - url: https://github.com/Kilo-Org/kilocode/archive/refs/tags/v{{ version }}.tar.gz
-    sha256: 96050bedea55c3be9d976546fc225254cf8c50c5393087ad044d1b39e087f4d7
+    sha256: 464e5a52233669be21c289ecdbf14c0861df2d8f6ad352bce641e6ff2d5313f4
     patches:
-      # Backport of Kilo-Org/kilocode#15105 (KILO_SKIP_PATCHELF and
-      # KILO_SKIP_RELEASE_UPLOAD, set by build.sh / bld.bat): release build
-      # without the GitHub upload or the patchelf interpreter rewrite.
-      # Remove once #15105 is merged and released.
+      # Based on Kilo-Org/kilocode#15105 (KILO_USE_HOST_BUN and
+      # KILO_SKIP_RELEASE_UPLOAD, set by build.sh / bld.bat): embed conda's bun
+      # instead of downloading upstream's prebuilt one, and skip the GitHub upload.
+      # Remove once an equivalent change is released upstream.
       - 0001-backport-kilocode-15105-distro-opt-outs.patch
   # Notices for embedded components that ship none themselves (everything else
   # is collected by collect-licenses.ts):
@@ -36,7 +36,7 @@ source:
     fn: font-RobotoMono-OFL.txt
 
 build:
-  number: 1
+  number: 0
   # bun (the compiler and runtime kilo is built into) is not built for osx-64.
   skip: true  # [osx and x86_64]
   # The kilo executable is conda's bun with the JS bundle embedded in it;
@@ -47,9 +47,9 @@ build:
 requirements:
   build:
     # `bun build --compile` copies the running bun into the kilo executable, so
-    # this is also kilo's JS runtime. Upstream requires bun ^1.4.2
-    # (package.json packageManager, enforced by packages/script).
-    - bun >=1.4.2,<2
+    # this is also kilo's JS runtime. build.ts fails unless bun's revision is
+    # upstream's pin (script/kilocode/bun.json: 1.4.4).
+    - bun 1.4.4
     - git
     # The executable is bun's, so it links libc like bun does: resolves those
     # DSOs for the overlinking check. bun's run_exports add its OS floor
